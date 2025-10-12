@@ -1,5 +1,18 @@
 package com.task_manager.controller;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.task_manager.dto.TaskDTO;
+import com.task_manager.model.Status;
+import com.task_manager.model.Task;
+import com.task_manager.service.TaskService;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.http.MediaType;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.web.servlet.MockMvc;
+
 import java.time.LocalDate;
 import java.util.Arrays;
 import java.util.List;
@@ -9,26 +22,9 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.when;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
-
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.http.MediaType;
-import org.springframework.test.web.servlet.MockMvc;
-
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.task_manager.dto.TaskDTO;
-import com.task_manager.model.Status;
-import com.task_manager.model.Task;
-import com.task_manager.service.TaskService;
 
 @WebMvcTest(TaskController.class)
 public class TaskControllerTest {
@@ -36,7 +32,7 @@ public class TaskControllerTest {
     @Autowired
     private MockMvc mockMvc;
 
-    @MockBean
+    @MockitoBean
     private TaskService taskService;
 
     @Autowired
@@ -44,8 +40,6 @@ public class TaskControllerTest {
 
     private Task task1;
     private Task task2;
-    private TaskDTO taskDTO1;
-    private TaskDTO taskDTO2;
 
     @BeforeEach
     void setUp() {
@@ -62,9 +56,6 @@ public class TaskControllerTest {
         task2.setDescription("Test Description 2");
         task2.setStatus(Status.IN_PROGRESS);
         task2.setDueDate(LocalDate.now().plusDays(2));
-
-        taskDTO1 = new TaskDTO(1L, "Test Task 1", "Test Description 1", Status.TODO, LocalDate.now().plusDays(1));
-        taskDTO2 = new TaskDTO(2L, "Test Task 2", "Test Description 2", Status.IN_PROGRESS, LocalDate.now().plusDays(2));
     }
 
     @Test
@@ -72,7 +63,7 @@ public class TaskControllerTest {
         List<Task> tasks = Arrays.asList(task1, task2);
         when(taskService.getAllTasks()).thenReturn(tasks);
 
-        mockMvc.perform(get("/api/tasks")
+        mockMvc.perform(get("/api/v1/tasks")
                 .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(2))
@@ -88,9 +79,9 @@ public class TaskControllerTest {
 
     @Test
     void getAllTasks_WhenNoTasks_ShouldReturnEmptyList() throws Exception {
-        when(taskService.getAllTasks()).thenReturn(Arrays.asList());
+        when(taskService.getAllTasks()).thenReturn(List.of());
 
-        mockMvc.perform(get("/api/tasks")
+        mockMvc.perform(get("/api/v1/tasks")
                 .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(0));
@@ -100,7 +91,7 @@ public class TaskControllerTest {
     void getTaskById_WhenTaskExists_ShouldReturnTask() throws Exception {
         when(taskService.getTaskById(1L)).thenReturn(Optional.of(task1));
 
-        mockMvc.perform(get("/api/tasks/1")
+        mockMvc.perform(get("/api/v1/tasks/1")
                 .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(1))
@@ -113,7 +104,7 @@ public class TaskControllerTest {
     void getTaskById_WhenTaskNotFound_ShouldReturn404() throws Exception {
         when(taskService.getTaskById(999L)).thenReturn(Optional.empty());
 
-        mockMvc.perform(get("/api/tasks/999")
+        mockMvc.perform(get("/api/v1/tasks/999")
                 .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isNotFound());
     }
@@ -130,7 +121,7 @@ public class TaskControllerTest {
 
         when(taskService.createTask(any(Task.class))).thenReturn(newTask);
 
-        mockMvc.perform(post("/api/tasks")
+        mockMvc.perform(post("/api/v1/tasks")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(newTaskDTO)))
                 .andExpect(status().isOk())
@@ -144,7 +135,7 @@ public class TaskControllerTest {
     void createTask_WithBlankTitle_ShouldReturn400() throws Exception {
         TaskDTO invalidTaskDTO = new TaskDTO(null, "", "New Description", Status.TODO, LocalDate.now().plusDays(3));
 
-        mockMvc.perform(post("/api/tasks")
+        mockMvc.perform(post("/api/v1/tasks")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(invalidTaskDTO)))
                 .andExpect(status().isBadRequest());
@@ -154,7 +145,7 @@ public class TaskControllerTest {
     void createTask_WithNullTitle_ShouldReturn400() throws Exception {
         TaskDTO invalidTaskDTO = new TaskDTO(null, null, "New Description", Status.TODO, LocalDate.now().plusDays(3));
 
-        mockMvc.perform(post("/api/tasks")
+        mockMvc.perform(post("/api/v1/tasks")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(invalidTaskDTO)))
                 .andExpect(status().isBadRequest());
@@ -165,7 +156,7 @@ public class TaskControllerTest {
         String longTitle = "a".repeat(101);
         TaskDTO invalidTaskDTO = new TaskDTO(null, longTitle, "New Description", Status.TODO, LocalDate.now().plusDays(3));
 
-        mockMvc.perform(post("/api/tasks")
+        mockMvc.perform(post("/api/v1/tasks")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(invalidTaskDTO)))
                 .andExpect(status().isBadRequest());
@@ -176,7 +167,7 @@ public class TaskControllerTest {
         String longDescription = "a".repeat(501);
         TaskDTO invalidTaskDTO = new TaskDTO(null, "Valid Title", longDescription, Status.TODO, LocalDate.now().plusDays(3));
 
-        mockMvc.perform(post("/api/tasks")
+        mockMvc.perform(post("/api/v1/tasks")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(invalidTaskDTO)))
                 .andExpect(status().isBadRequest());
@@ -194,7 +185,7 @@ public class TaskControllerTest {
 
         when(taskService.updateTask(anyLong(), any(Task.class))).thenReturn(updatedTask);
 
-        mockMvc.perform(put("/api/tasks/1")
+        mockMvc.perform(put("/api/v1/tasks/1")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(updateTaskDTO)))
                 .andExpect(status().isOk())
@@ -208,7 +199,7 @@ public class TaskControllerTest {
     void updateTask_WithInvalidTitle_ShouldReturn400() throws Exception {
         TaskDTO invalidTaskDTO = new TaskDTO(1L, "", "Updated Description", Status.IN_PROGRESS, LocalDate.now().plusDays(5));
 
-        mockMvc.perform(put("/api/tasks/1")
+        mockMvc.perform(put("/api/v1/tasks/1")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(invalidTaskDTO)))
                 .andExpect(status().isBadRequest());
@@ -220,7 +211,7 @@ public class TaskControllerTest {
 
         when(taskService.updateTask(anyLong(), any(Task.class))).thenThrow(new RuntimeException("Task not found with id: 999"));
 
-        mockMvc.perform(put("/api/tasks/999")
+        mockMvc.perform(put("/api/v1/tasks/999")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(updateTaskDTO)))
                 .andExpect(status().isNotFound());
@@ -230,7 +221,7 @@ public class TaskControllerTest {
     void deleteTask_ShouldReturn200() throws Exception {
         doNothing().when(taskService).deleteTask(1L);
 
-        mockMvc.perform(delete("/api/tasks/1"))
+        mockMvc.perform(delete("/api/v1/tasks/1"))
                 .andExpect(status().isOk());
     }
 
@@ -238,7 +229,7 @@ public class TaskControllerTest {
     void deleteTask_WithNonExistentId_ShouldStillReturn200() throws Exception {
         doNothing().when(taskService).deleteTask(999L);
 
-        mockMvc.perform(delete("/api/tasks/999"))
+        mockMvc.perform(delete("/api/v1/tasks/999"))
                 .andExpect(status().isOk());
     }
 }
