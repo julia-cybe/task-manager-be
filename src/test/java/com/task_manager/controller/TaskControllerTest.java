@@ -8,7 +8,7 @@ import com.task_manager.service.TaskService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
@@ -35,7 +35,6 @@ public class TaskControllerTest {
     @MockitoBean
     private TaskService taskService;
 
-    @Autowired
     private ObjectMapper objectMapper;
 
     private Task task1;
@@ -43,6 +42,8 @@ public class TaskControllerTest {
 
     @BeforeEach
     void setUp() {
+        objectMapper = new ObjectMapper();
+        objectMapper.findAndRegisterModules(); // Register JavaTimeModule for LocalDate serialization
         task1 = new Task();
         task1.setId(1L);
         task1.setTitle("Test Task 1");
